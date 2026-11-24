@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Toast } from "@/components/ui/toast";
 
 type Mode = "login" | "signup";
 
@@ -23,8 +24,10 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "error" | "success" | "info" | "warning";
+  } | null>(null);
 
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -74,8 +77,7 @@ export default function AuthPage() {
     e.preventDefault();
 
     setLoading(true);
-    setError("");
-    setMessage("");
+    setToast(null);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -87,12 +89,13 @@ export default function AuthPage() {
         throw error;
       }
 
-      setMessage("Login successful!");
-
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setToast({
+        message: err instanceof Error ? err.message : "Something went wrong.",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -102,11 +105,10 @@ export default function AuthPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setError("");
-    setMessage("");
+    setToast(null);
 
     if (signup.password !== signup.confirmPassword) {
-      setError("Passwords do not match.");
+      setToast({ message: "Passwords do not match.", type: "warning" });
       return;
     }
 
@@ -141,14 +143,20 @@ export default function AuthPage() {
       // If email confirmation is required, show the verification screen.
       if (!data.session) {
         // setVerificationEmail(signup.email.trim());
-        alert("Check email for verification mail");
+        setToast({
+          message: "Check your email for the verification link.",
+          type: "success",
+        });
         return;
       }
 
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setToast({
+        message: err instanceof Error ? err.message : "Something went wrong.",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -548,22 +556,17 @@ export default function AuthPage() {
           </section>
         </div>
 
-        {/* Feedback */}
-        {(error || message) && (
-          <div
-            role="status"
-            className={`mt-4 rounded-xl px-4 py-3 text-sm ${
-              error ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
-            }`}
-          >
-            {error || message}
-          </div>
-        )}
-
         <p className="mt-6 text-center text-xs text-neutral-400">
           © 2026 parichaya. Made for the curious internet.
         </p>
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </main>
   );
 }
