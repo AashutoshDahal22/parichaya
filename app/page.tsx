@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Globe } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Globe, User2Icon } from "lucide-react";
 import { FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa";
+import { useAuth } from "@/hooks/use-auth";
 
 const socials = [
   { title: "Portfolio", icon: Globe },
@@ -55,6 +58,8 @@ function buildQr() {
 const qr = buildQr();
 
 export default function Home() {
+  const { user } = useAuth();
+  const name = user?.user_metadata?.name || "there";
   return (
     <main className="flex min-h-screen flex-col bg-[#faf9f6] text-neutral-900 antialiased">
       {/* Navigation */}
@@ -71,11 +76,23 @@ export default function Home() {
             href="/auth"
             className={`group inline-flex h-10 items-center gap-2 bg-neutral-900 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 ${focusRing}`}
           >
-            Get started
-            <ArrowUpRight
-              size={15}
-              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-            />
+            {user ? (
+              <>
+                  {name}
+                <User2Icon
+                  size={15}
+                  className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  />
+              </>
+            ) : (
+              <>
+                Get Started
+                <ArrowUpRight
+                  size={15}
+                  className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                />
+              </>
+            )}
           </Link>
         </nav>
       </header>

@@ -8,16 +8,16 @@ type DashboardGuardProps = {
 };
 
 export async function DashboardGuard({ children }: DashboardGuardProps) {
+  // Wait until an actual request comes in.
   await connection();
 
   const supabase = await createClient();
 
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  if (!user) {
     redirect("/auth");
   }
 

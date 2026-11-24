@@ -32,7 +32,41 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getClaims();
+  // Refresh and validate the user's authentication session.
+  const { data, error } = await supabase.auth.getClaims();
+
+  const isAuthenticated = !error && !!data?.claims?.sub;
+  const pathname = request.nextUrl.pathname;
+
+  // Redirect authenticated users away from the auth page.
+  if (isAuthenticated && pathname === "/auth") {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/dashboard";
+
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+
+    // Preserve Supabase cookies.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+
+    return redirectResponse;
+  }
+
+  // Redirect unauthenticated users away from dashboard pages.
+  if (!isAuthenticated && pathname.startsWith("/dashboard")) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth";
+
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+
+    // Preserve Supabase cookies.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+
+    return redirectResponse;
+  }
 
   return supabaseResponse;
 }

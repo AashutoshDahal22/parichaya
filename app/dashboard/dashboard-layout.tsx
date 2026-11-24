@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   UserRound,
   Link2,
-  // Palette,
+  Home,
   // Zap,
   LogOut,
 } from "lucide-react";
@@ -29,11 +29,11 @@ const navigation = [
     href: "/dashboard/links",
     icon: Link2,
   },
-  // {
-  //   label: "Appearance",
-  //   href: "/dashboard/appearance",
-  //   icon: Palette,
-  // },
+  {
+    label: "Home",
+    href: "/",
+    icon: Home,
+  },
 ];
 
 export function NavigationUI({ children }: { children: React.ReactNode }) {

@@ -34,9 +34,9 @@ export async function POST(request: Request) {
 
     // SIGNUP
     if (body.action === "signup") {
-      const { name, username, email, password } = body;
+      const { name, email, password } = body;
 
-      if (!name || !username || !email || !password) {
+      if (!name || !email || !password) {
         return NextResponse.json(
           { error: "All fields are required." },
           { status: 400 },
@@ -50,16 +50,16 @@ export async function POST(request: Request) {
         );
       }
 
-      const normalizedUsername = username
-        .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "");
+      // const normalizedUsername = username
+      //   .toLowerCase()
+      //   .replace(/[^a-z0-9-]/g, "");
 
-      if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
-        return NextResponse.json(
-          { error: "Username must be between 3 and 20 characters." },
-          { status: 400 },
-        );
-      }
+      // if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
+      //   return NextResponse.json(
+      //     { error: "Username must be between 3 and 20 characters." },
+      //     { status: 400 },
+      //   );
+      // }
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
           emailRedirectTo: `${new URL(request.url).origin}/api/auth/callback`,
           data: {
             name,
-            username: normalizedUsername,
+            // username: normalizedUsername,
           },
         },
       });

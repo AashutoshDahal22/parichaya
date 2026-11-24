@@ -29,6 +29,9 @@ export default function AuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // const [verificationEmail, setVerificationEmail] = useState<string | null>(
+  //   null,
+  // );
 
   const [login, setLogin] = useState({
     email: "",
@@ -37,7 +40,7 @@ export default function AuthPage() {
 
   const [signup, setSignup] = useState({
     name: "",
-    username: "",
+    // username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -107,14 +110,14 @@ export default function AuthPage() {
       return;
     }
 
-    const username = signup.username.trim().toLowerCase();
+    // const username = signup.username.trim().toLowerCase();
 
-    if (!/^[a-z0-9-]{3,20}$/.test(username)) {
-      setError(
-        "Username must be 3–20 characters and contain only letters, numbers, and hyphens.",
-      );
-      return;
-    }
+    // if (!/^[a-z0-9-]{3,20}$/.test(username)) {
+    //   setError(
+    //     "Username must be 3–20 characters and contain only letters, numbers, and hyphens.",
+    //   );
+    //   return;
+    // }
 
     setLoading(true);
 
@@ -125,7 +128,7 @@ export default function AuthPage() {
         options: {
           data: {
             name: signup.name.trim(),
-            username,
+            // username,
           },
           emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
@@ -135,15 +138,12 @@ export default function AuthPage() {
         throw error;
       }
 
-      // If email confirmation is enabled, Supabase won't return a session yet.
+      // If email confirmation is required, show the verification screen.
       if (!data.session) {
-        setMessage(
-          "Account created! Please check your email to verify your account.",
-        );
+        // setVerificationEmail(signup.email.trim());
+        alert("Check email for verification mail");
         return;
       }
-
-      setMessage("Account created successfully!");
 
       router.push("/dashboard");
       router.refresh();
@@ -375,16 +375,16 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label
-                  htmlFor="signup-username"
+                htmlFor="signup-username"
                   className="mb-2 block text-sm font-medium"
-                >
+                  >
                   Username
-                </label>
-                <div className="flex overflow-hidden rounded-xl border border-neutral-200 focus-within:border-neutral-900">
+                  </label>
+                  <div className="flex overflow-hidden rounded-xl border border-neutral-200 focus-within:border-neutral-900">
                   <span className="flex items-center border-r border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500">
-                    parichaya.com/
+                  parichaya.com/
                   </span>
                   <input
                     id="signup-username"
@@ -398,12 +398,12 @@ export default function AuthPage() {
                         "username",
                         e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
                       )
-                    }
+                      }
                     placeholder="yourname"
                     className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-neutral-400"
-                  />
+                    />
                 </div>
-              </div>
+              </div> */}
 
               <div>
                 <label

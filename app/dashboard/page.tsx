@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Circle, Globe } from "lucide-react";
+import { ArrowRight, Globe } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function DashboardPage() {
   const [username, setUsername] = useState("");
-  const [claimed, setClaimed] = useState(false);
 
-  const isValidUsername = /^[a-zA-Z0-9-]{3,20}$/.test(username);
-  const canClaim = isValidUsername && !claimed;
   const { user, isLoading } = useAuth();
+
   const name = user?.user_metadata?.name || "there";
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const siteHost = siteUrl ? new URL(siteUrl).host : "";
 
   const handleClaim = () => {
-    if (!canClaim) return;
-    setClaimed(true);
+    // Username claiming will be implemented later.
   };
 
   return (
@@ -30,6 +27,7 @@ export default function DashboardPage() {
               <h1 className="mt-2 text-2xl font-semibold tracking-tight">
                 Welcome back, {isLoading ? "Loading" : name}.
               </h1>
+
               <p className="mt-2 text-sm text-neutral-500">
                 Let's get your corner of the internet ready.
               </p>
@@ -72,54 +70,20 @@ export default function DashboardPage() {
                   id="username"
                   type="text"
                   value={username}
-                  onChange={(e) => {
-                    setUsername(
-                      e.target.value.toLowerCase().replace(/\s/g, ""),
-                    );
-                    setClaimed(false);
-                  }}
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="yourname"
                   maxLength={20}
                   className="min-w-0 flex-1 bg-white px-4 py-3 text-sm outline-none placeholder:text-neutral-300"
                 />
               </div>
 
-              <div className="mt-3 flex min-h-5 items-center gap-2 text-xs">
-                {claimed ? (
-                  <>
-                    <CheckCircle2 size={15} className="text-green-600" />
-                    <span className="text-green-700">
-                      Username claimed locally! Supabase connection comes later.
-                    </span>
-                  </>
-                ) : username.length === 0 ? (
-                  <span className="text-neutral-400">
-                    3–20 characters. Letters, numbers and hyphens only.
-                  </span>
-                ) : isValidUsername ? (
-                  <>
-                    <CheckCircle2 size={15} className="text-green-600" />
-                    <span className="text-green-700">
-                      Username format looks good.
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Circle size={15} className="text-red-500" />
-                    <span className="text-red-500">
-                      Use 3–20 letters, numbers or hyphens.
-                    </span>
-                  </>
-                )}
-              </div>
-
               <button
+                type="button"
                 onClick={handleClaim}
-                disabled={!canClaim}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-300 sm:w-auto"
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-700 sm:w-auto"
               >
-                {claimed ? "Username claimed" : "Claim username"}
-                {!claimed && <ArrowRight size={16} />}
+                Claim username
+                <ArrowRight size={16} />
               </button>
             </div>
           </div>

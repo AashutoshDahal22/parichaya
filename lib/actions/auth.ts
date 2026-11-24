@@ -1,4 +1,3 @@
-
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -8,23 +7,21 @@ export type SignupState = {
   success?: boolean;
 };
 
-export async function signup(
-  formData: FormData
-): Promise<SignupState> {
+export async function signup(formData: FormData): Promise<SignupState> {
   const name = String(formData.get("name") ?? "").trim();
-  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  // const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!name || !username || !email || !password) {
+  if (!name || !email || !password) {
     return { error: "Please fill in all required fields." };
   }
 
-  if (!/^[a-z0-9-]{3,20}$/.test(username)) {
-    return {
-      error: "Username must be 3–20 characters and contain only letters, numbers, or hyphens.",
-    };
-  }
+  // if (!/^[a-z0-9-]{3,20}$/.test(username)) {
+  //   return {
+  //     error: "Username must be 3–20 characters and contain only letters, numbers, or hyphens.",
+  //   };
+  // }
 
   if (password.length < 8) {
     return {
@@ -41,7 +38,7 @@ export async function signup(
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       data: {
         name,
-        username,
+        // username,
       },
     },
   });
