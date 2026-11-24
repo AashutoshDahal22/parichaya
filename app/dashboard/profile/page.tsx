@@ -1,21 +1,57 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Camera, Check, ExternalLink, Link2, UserRound, X } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+
+type Profile = {
+  name: string;
+  username: string;
+  bio: string;
+};
+
+const DEFAULT_PROFILE: Profile = {
+  name: "Your Name",
+  username: "yourname",
+  bio: "",
+};
 
 export default function ProfilePage() {
+  const { user, isLoading } = useAuth();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteHost = siteUrl ? new URL(siteUrl).host : "";
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [profile, setProfile] = useState({
-    name: "Your Name",
-    username: "yourname",
-    bio: "Your bio",
-  });
-
+  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const updateProfile = (field: keyof typeof profile, value: string) => {
+  // Populate the profile using the authenticated Supabase user.
+  useEffect(() => {
+    if (!user) return;
+
+    const metadata = user.user_metadata ?? {};
+
+    setProfile({
+      name: metadata.name || "",
+      username: metadata.username || "",
+      bio: metadata.bio || "",
+    });
+
+    setImagePreview(metadata.avatar_url || metadata.picture || null);
+  }, [user]);
+
+  // Clean up locally generated image previews.
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const updateProfile = (field: keyof Profile, value: string) => {
     setProfile((current) => ({
       ...current,
       [field]: value,
@@ -27,17 +63,21 @@ export default function ProfilePage() {
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) return;
+    if (!file.type.startsWith("image/")) {
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be smaller than 5 MB.");
+      event.target.value = "";
+      return;
+    }
 
     const imageUrl = URL.createObjectURL(file);
     setImagePreview(imageUrl);
   };
 
   const removeImage = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-
     setImagePreview(null);
 
     if (fileInputRef.current) {
@@ -46,6 +86,50 @@ export default function ProfilePage() {
   };
 
   const username = profile.username.toLowerCase().replace(/[^a-z0-9-]/g, "");
+
+  const accountEmail = user?.email || "";
+
+  // Reset the preview to the information currently stored in Supabase.
+  const handleReset = () => {
+    if (!user) return;
+
+    const metadata = user.user_metadata ?? {};
+
+    setProfile({
+      name: metadata.name || "",
+      username: metadata.username || "",
+      bio: metadata.bio || "",
+    });
+
+    setImagePreview(metadata.avatar_url || metadata.picture || null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 rounded bg-neutral-200" />
+          <div className="h-40 rounded-2xl bg-neutral-200" />
+          <div className="h-80 rounded-2xl bg-neutral-200" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-4xl rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+        <h1 className="text-lg font-semibold">Unable to load profile</h1>
+        <p className="mt-2 text-sm text-neutral-500">
+          Please sign in again to view your profile.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -130,6 +214,24 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-5">
+            {/* Account email */}
+            <div>
+              <label htmlFor="email" className="mb-2 block text-sm font-medium">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={accountEmail}
+                readOnly
+                className="w-full cursor-not-allowed rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-500 outline-none"
+              />
+              <p className="mt-2 text-xs text-neutral-400">
+                Your email address associated with your account.
+              </p>
+            </div>
+
+            {/* Display name */}
             <div>
               <label htmlFor="name" className="mb-2 block text-sm font-medium">
                 Display name
@@ -148,6 +250,7 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {/* Username */}
             <div>
               <label
                 htmlFor="username"
@@ -158,7 +261,7 @@ export default function ProfilePage() {
 
               <div className="flex overflow-hidden rounded-lg border border-neutral-200 transition focus-within:border-neutral-900">
                 <span className="flex items-center border-r border-neutral-200 bg-neutral-50 px-3 text-sm text-neutral-500">
-                  parichaya.com/
+                  {isLoading ? "Loading" : siteHost}/
                 </span>
                 <input
                   id="username"
@@ -182,6 +285,7 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {/* Bio */}
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <label htmlFor="bio" className="text-sm font-medium">
@@ -217,19 +321,18 @@ export default function ProfilePage() {
                 A quick preview of your profile information.
               </p>
             </div>
-            <ExternalLink size={18} className="text-neutral-400" />
+            {/* <ExternalLink size={18} className="text-neutral-400" /> */}
           </div>
 
           <div className="rounded-xl border border-neutral-200 bg-[#faf9f6] px-5 py-8 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-neutral-200">
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-neutral-200">
               {imagePreview ? (
                 <Image
                   src={imagePreview}
                   alt="Profile preview"
-                  width={80}
-                  height={80}
+                  fill
                   unoptimized
-                  className="h-full w-full object-cover"
+                  className="object-cover"
                 />
               ) : (
                 <UserRound size={32} className="text-neutral-400" />
@@ -245,26 +348,20 @@ export default function ProfilePage() {
             </p>
 
             <p className="mt-5 text-xs text-neutral-400">
-              parichaya.com/{username || "yourname"}
+              {isLoading ? "Loading" : siteHost}/{username || "yourname"}
             </p>
           </div>
         </section>
 
         {/* Save actions */}
         <div className="flex flex-col-reverse justify-end gap-3 border-t border-neutral-200 pt-5 sm:flex-row">
-          <button
+          {/* <button
             type="button"
-            onClick={() =>
-              setProfile({
-                name: "Your Name",
-                username: "yourname",
-                bio: "Developer, creator & curious human.",
-              })
-            }
+            onClick={handleReset}
             className="rounded-lg border border-neutral-200 px-5 py-2.5 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50"
           >
             Reset
-          </button>
+          </button> */}
 
           <button
             type="button"

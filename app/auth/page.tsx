@@ -11,13 +11,14 @@ import {
   UserRound,
   CheckCircle2,
 } from "lucide-react";
-
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
 
 export default function AuthPage() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [mode, setMode] = useState<Mode>("login");
 
@@ -65,6 +66,7 @@ export default function AuthPage() {
   const inputClass =
     "w-full rounded-xl border border-neutral-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/5";
 
+  // LOGIN
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -73,22 +75,13 @@ export default function AuthPage() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "login",
-          email: login.email,
-          password: login.password,
-        }),
+      const { error } = await supabase.auth.signInWithPassword({
+        email: login.email.trim(),
+        password: login.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Login failed.");
+      if (error) {
+        throw error;
       }
 
       setMessage("Login successful!");
@@ -102,6 +95,7 @@ export default function AuthPage() {
     }
   };
 
+  // SIGNUP
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -113,30 +107,36 @@ export default function AuthPage() {
       return;
     }
 
+    const username = signup.username.trim().toLowerCase();
+
+    if (!/^[a-z0-9-]{3,20}$/.test(username)) {
+      setError(
+        "Username must be 3–20 characters and contain only letters, numbers, and hyphens.",
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { data, error } = await supabase.auth.signUp({
+        email: signup.email.trim(),
+        password: signup.password,
+        options: {
+          data: {
+            name: signup.name.trim(),
+            username,
+          },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
-        body: JSON.stringify({
-          action: "signup",
-          name: signup.name,
-          username: signup.username,
-          email: signup.email,
-          password: signup.password,
-        }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Signup failed.");
+      if (error) {
+        throw error;
       }
 
-      if (result.requiresEmailConfirmation) {
+      // If email confirmation is enabled, Supabase won't return a session yet.
+      if (!data.session) {
         setMessage(
           "Account created! Please check your email to verify your account.",
         );
@@ -169,7 +169,7 @@ export default function AuthPage() {
 
         {/* Auth container */}
         <div className="relative grid overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-xl shadow-neutral-200/40 md:grid-cols-2">
-          {/* Sliding glass: blurs whichever side is inactive (desktop) */}
+          {/* Sliding glass */}
           <button
             type="button"
             onClick={toggleMode}
@@ -324,7 +324,7 @@ export default function AuthPage() {
                 className="font-medium text-neutral-900 underline underline-offset-4"
                 disabled={loading}
               >
-                {loading ? "Creating account..." : "Create account"}
+                Create account
               </button>
             </p>
           </section>
@@ -518,7 +518,6 @@ export default function AuthPage() {
                 disabled={loading}
               >
                 {loading ? "Creating account..." : "Create account"}
-
                 <ArrowRight size={17} />
               </button>
             </form>
@@ -543,11 +542,23 @@ export default function AuthPage() {
                 className="font-medium text-neutral-900 underline underline-offset-4"
                 disabled={loading}
               >
-                {loading ? "Signing in..." : "Login"}
+                Login
               </button>
             </p>
           </section>
         </div>
+
+        {/* Feedback */}
+        {(error || message) && (
+          <div
+            role="status"
+            className={`mt-4 rounded-xl px-4 py-3 text-sm ${
+              error ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+            }`}
+          >
+            {error || message}
+          </div>
+        )}
 
         <p className="mt-6 text-center text-xs text-neutral-400">
           © 2026 parichaya. Made for the curious internet.

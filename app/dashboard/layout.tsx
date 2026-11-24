@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { DashboardGuard } from "./dashboard-guard";
+import Loading from "./loading";
 
 export default function DashboardLayout({
   children,
@@ -7,7 +8,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense fallback={<div>Loading dashboard...</div>}>
+    <Suspense fallback={<Loading />}>
       <DashboardGuard>{children}</DashboardGuard>
     </Suspense>
   );

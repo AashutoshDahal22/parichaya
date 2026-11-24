@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+
 import {
   LayoutDashboard,
   UserRound,
   Link2,
   // Palette,
   // Zap,
+  LogOut,
 } from "lucide-react";
 
 const navigation = [
@@ -35,6 +38,19 @@ const navigation = [
 
 export function NavigationUI({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOut, isLoading } = useAuth();
+  const name = user?.user_metadata?.name || "there";
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-neutral-900 md:flex">
@@ -84,14 +100,24 @@ export function NavigationUI({ children }: { children: React.ReactNode }) {
             One simple page for everything you share online.
           </p>
         </div> */}
-
         <div className="mt-8 flex items-center gap-3 border-t border-neutral-100 pt-5 md:mt-auto">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8e4dc] font-medium">
-            A
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] font-medium">
+            {name.charAt(0).toUpperCase()}
           </div>
 
-          <div>
-            <p className="text-sm font-medium">Aashutosh</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {isLoading ? "Loading" : name}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500 transition hover:text-red-600"
+            >
+              <LogOut size={13} />
+              Logout
+            </button>
           </div>
         </div>
       </aside>

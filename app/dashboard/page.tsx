@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, CheckCircle2, Circle, Globe } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DashboardPage() {
   const [username, setUsername] = useState("");
@@ -9,6 +10,10 @@ export default function DashboardPage() {
 
   const isValidUsername = /^[a-zA-Z0-9-]{3,20}$/.test(username);
   const canClaim = isValidUsername && !claimed;
+  const { user, isLoading } = useAuth();
+  const name = user?.user_metadata?.name || "there";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteHost = siteUrl ? new URL(siteUrl).host : "";
 
   const handleClaim = () => {
     if (!canClaim) return;
@@ -23,7 +28,7 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-                Welcome back, Aashutosh.
+                Welcome back, {isLoading ? "Loading" : name}.
               </h1>
               <p className="mt-2 text-sm text-neutral-500">
                 Let's get your corner of the internet ready.
@@ -60,7 +65,7 @@ export default function DashboardPage() {
 
               <div className="mt-2 flex flex-col overflow-hidden rounded-xl border border-neutral-200 focus-within:border-neutral-500 sm:flex-row">
                 <div className="flex items-center border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-500 sm:border-b-0 sm:border-r">
-                  parichaya.com/
+                  {isLoading ? "Loading" : siteHost}/
                 </div>
 
                 <input
