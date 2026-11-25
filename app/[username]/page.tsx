@@ -25,11 +25,11 @@ async function ProfileContent({ params }: Props) {
 
   const { username } = await params;
 
-  const profile = await getPublicProfile(username);
+  const result = await getPublicProfile(username);
 
-  if (!profile) {
+  if (!result) {
     notFound();
   }
 
-  return <PublicProfile profile={profile} />;
+  return <PublicProfile profile={result.profile} links={result.links} />;
 }

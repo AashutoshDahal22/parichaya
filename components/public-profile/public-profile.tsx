@@ -1,4 +1,5 @@
-import { ArrowUpRight, UserRound } from "lucide-react";
+import { ArrowUpRight, UserRound, Link as LinkIcon } from "lucide-react";
+
 import {
   FaGlobe,
   FaGithub,
@@ -16,54 +17,30 @@ type PublicProfileProps = {
     bio: string | null;
     avatar_url: string | null;
   };
+  links: {
+    id: string;
+    title: string;
+    url: string;
+    description: string | null;
+    icon: string;
+    position: number;
+  }[];
 };
 
-const links = [
-  {
-    title: "My Portfolio",
-    description: "Projects, experiments & things I've built",
-    href: "#",
-    icon: FaGlobe,
-  },
-  {
-    title: "GitHub",
-    description: "Open-source projects & code",
-    href: "#",
-    icon: FaGithub,
-  },
-  {
-    title: "LinkedIn",
-    description: "Let's connect professionally",
-    href: "#",
-    icon: FaLinkedin,
-  },
-  {
-    title: "Instagram",
-    description: "Life outside the terminal",
-    href: "#",
-    icon: FaInstagram,
-  },
-  {
-    title: "X (Formerly Twitter)",
-    description: "Life outside the terminal",
-    href: "#",
-    icon: FaTwitter,
-  },
-  {
-    title: "Facebook",
-    description: "Life outside the terminal",
-    href: "#",
-    icon: FaFacebook,
-  },
-  {
-    title: "YouTube",
-    description: "Videos & content",
-    href: "#",
-    icon: FaYoutube,
-  },
-];
+const iconMap: Record<string, React.ElementType> = {
+  website: FaGlobe,
+  globe: FaGlobe,
+  github: FaGithub,
+  instagram: FaInstagram,
+  linkedin: FaLinkedin,
+  twitter: FaTwitter,
+  x: FaTwitter,
+  facebook: FaFacebook,
+  youtube: FaYoutube,
+  link: LinkIcon,
+};
 
-export function PublicProfile({ profile }: PublicProfileProps) {
+export function PublicProfile({ profile, links }: PublicProfileProps) {
   return (
     <main className="min-h-screen px-6 py-16">
       <div className="mx-auto flex max-w-md flex-col items-center">
@@ -95,12 +72,12 @@ export function PublicProfile({ profile }: PublicProfileProps) {
         {/* Links */}
         <div className="mt-10 flex w-full flex-col gap-3">
           {links.map((link) => {
-            const Icon = link.icon;
+            const Icon = iconMap[link.icon?.toLowerCase()] ?? LinkIcon;
 
             return (
               <a
-                key={link.title}
-                href={link.href}
+                key={link.id}
+                href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center gap-4 rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-400 hover:shadow-sm"
@@ -109,23 +86,31 @@ export function PublicProfile({ profile }: PublicProfileProps) {
                   <Icon size={20} className="text-neutral-700" />
                 </div>
 
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-extrabold text-black">
                     {link.title}
                   </h2>
 
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {link.description}
-                  </p>
+                  {link.description && (
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {link.description}
+                    </p>
+                  )}
                 </div>
 
                 <ArrowUpRight
                   size={18}
-                  className="text-neutral-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  className="shrink-0 text-neutral-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                 />
               </a>
             );
           })}
+
+          {links.length === 0 && (
+            <p className="py-8 text-center text-sm text-neutral-400">
+              No links available yet.
+            </p>
+          )}
         </div>
 
         {/* Footer */}

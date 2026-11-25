@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight,ArrowRight, Globe } from "lucide-react";
+import { ArrowUpRight, ArrowRight, Globe } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -61,7 +61,9 @@ export default function DashboardPage() {
 
         {profile?.username ? (
           <div className="mt-10 rounded-2xl border border-neutral-200 bg-white p-6 md:p-8">
-            <h2 className="text-xl font-semibold">Your username is claimed!</h2>
+            <h2 className="text-xl font-semibold">
+              Your have claimed your username!
+            </h2>
 
             <p className="mt-3 text-sm text-neutral-500">Your personal page:</p>
 
