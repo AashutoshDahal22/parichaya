@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { ComponentProps } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -13,6 +14,7 @@ import {
   X,
   Globe,
   Pencil,
+  RotateCcw,
 } from "lucide-react";
 
 import {
@@ -27,6 +29,9 @@ import {
 } from "react-icons/fa6";
 
 import type { IconType } from "react-icons";
+import { useLinks } from "@/hooks/use-links";
+import type { LinkDraft } from "@/hooks/use-links";
+import { Toast } from "@/components/ui/toast"; // adjust to wherever Toast lives
 
 type Service =
   | "Instagram"
@@ -39,12 +44,12 @@ type Service =
   | "Website"
   | "Custom Link";
 
-type LinkItem = {
+type ToastType = NonNullable<ComponentProps<typeof Toast>["type"]>;
+
+type ToastState = {
   id: number;
-  service: Service;
-  title: string;
-  url: string;
-  enabled: boolean;
+  message: string;
+  type: ToastType;
 };
 
 const services: {
@@ -62,52 +67,59 @@ const services: {
   { name: "Custom Link", icon: Globe },
 ];
 
-const initialLinks: LinkItem[] = [
-  {
-    id: 1,
-    service: "GitHub",
-    title: "GitHub",
-    url: "https://github.com/yourname",
-    enabled: true,
-  },
-  {
-    id: 2,
-    service: "LinkedIn",
-    title: "LinkedIn",
-    url: "https://linkedin.com/in/yourname",
-    enabled: true,
-  },
-  {
-    id: 3,
-    service: "Instagram",
-    title: "Instagram",
-    url: "https://instagram.com/yourname",
-    enabled: true,
-  },
-  {
-    id: 4,
-    service: "Website",
-    title: "My Portfolio",
-    url: "https://yourportfolio.com",
-    enabled: false,
-  },
-];
+const formatUrl = (url: string) => {
+  const trimmed = url.trim();
+
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
+const getServiceFromIcon = (icon: string): Service => {
+  const service = services.find((item) => item.name === icon);
+  return service?.name ?? "Custom Link";
+};
 
 export default function LinksPage() {
-  const [links, setLinks] = useState<LinkItem[]>(initialLinks);
+  const {
+    links,
+    isLoading,
+    isSaving,
+    error,
+    hasChanges,
+    addLink,
+    updateLink,
+    deleteLink,
+    toggleLink,
+    reorderLinks,
+    saveChanges,
+    discardChanges,
+  } = useLinks();
 
   const [selectedService, setSelectedService] = useState<Service>("Instagram");
 
   const [newTitle, setNewTitle] = useState("Instagram");
   const [newUrl, setNewUrl] = useState("");
 
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const [editForm, setEditForm] = useState({
     title: "",
     url: "",
   });
+
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  // Stable callbacks so the Toast's auto-dismiss timer isn't reset on every render
+  const showToast = useCallback((message: string, type: ToastType) => {
+    setToast({ id: Date.now(), message, type });
+  }, []);
+
+  const closeToast = useCallback(() => setToast(null), []);
+
+  // Surface errors coming from the useLinks hook as an error toast
+  useEffect(() => {
+    if (error) showToast(error, "error");
+  }, [error, showToast]);
 
   const getServiceIcon = (service: Service) => {
     return services.find((item) => item.name === service)?.icon ?? Globe;
@@ -118,99 +130,140 @@ export default function LinksPage() {
     setNewTitle(service === "Custom Link" ? "" : service);
   };
 
-  const addLink = () => {
+  // Add link to local working copy
+  const handleAddLink = async () => {
     if (!newTitle.trim() || !newUrl.trim()) return;
 
-    const formattedUrl = /^https?:\/\//i.test(newUrl.trim())
-      ? newUrl.trim()
-      : `https://${newUrl.trim()}`;
-
-    const newLink: LinkItem = {
-      id: Date.now(),
-      service: selectedService,
+    const success = await addLink({
       title: newTitle.trim(),
-      url: formattedUrl,
-      enabled: true,
-    };
+      url: formatUrl(newUrl),
+      icon: selectedService,
+    });
 
-    setLinks((current) => [...current, newLink]);
-    setNewTitle(selectedService === "Custom Link" ? "" : selectedService);
-    setNewUrl("");
+    if (success) {
+      setNewTitle(selectedService === "Custom Link" ? "" : selectedService);
+      setNewUrl("");
+    }
   };
 
-  const deleteLink = (id: number) => {
-    setLinks((current) => current.filter((link) => link.id !== id));
-    if (editingId === id) setEditingId(null);
+  // Delete link from local working copy
+  const handleDeleteLink = async (id: string) => {
+    await deleteLink(id);
+
+    if (editingId === id) {
+      setEditingId(null);
+    }
   };
 
-  const toggleLink = (id: number) => {
-    setLinks((current) =>
-      current.map((link) =>
-        link.id === id ? { ...link, enabled: !link.enabled } : link,
-      ),
-    );
+  // Toggle visibility locally
+  const handleToggleLink = async (id: string) => {
+    await toggleLink(id);
   };
 
-  const startEditing = (link: LinkItem) => {
+  // Start editing
+  const startEditing = (link: LinkDraft) => {
     setEditingId(link.id);
+
     setEditForm({
       title: link.title,
       url: link.url,
     });
   };
 
-  const saveEdit = (id: number) => {
+  // Update link in local working copy
+  const handleSaveEdit = async (id: string) => {
     if (!editForm.title.trim() || !editForm.url.trim()) return;
 
-    const formattedUrl = /^https?:\/\//i.test(editForm.url.trim())
-      ? editForm.url.trim()
-      : `https://${editForm.url.trim()}`;
+    const success = await updateLink(id, {
+      title: editForm.title.trim(),
+      url: formatUrl(editForm.url),
+    });
 
-    setLinks((current) =>
-      current.map((link) =>
-        link.id === id
-          ? {
-              ...link,
-              title: editForm.title.trim(),
-              url: formattedUrl,
-            }
-          : link,
-      ),
-    );
-
-    setEditingId(null);
+    if (success) {
+      setEditingId(null);
+    }
   };
 
-  const moveLink = (targetId: number) => {
-    if (draggedId === null || draggedId === targetId) return;
+  // Reorder links locally
+  const moveLink = async (targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
 
-    setLinks((current) => {
-      const updated = [...current];
+    const updatedLinks = [...links];
 
-      const fromIndex = updated.findIndex((link) => link.id === draggedId);
+    const fromIndex = updatedLinks.findIndex((link) => link.id === draggedId);
 
-      const toIndex = updated.findIndex((link) => link.id === targetId);
+    const toIndex = updatedLinks.findIndex((link) => link.id === targetId);
 
-      if (fromIndex === -1 || toIndex === -1) return current;
+    if (fromIndex === -1 || toIndex === -1) return;
 
-      const [movedItem] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, movedItem);
+    const [movedItem] = updatedLinks.splice(fromIndex, 1);
 
-      return updated;
-    });
+    updatedLinks.splice(toIndex, 0, movedItem);
+
+    await reorderLinks(updatedLinks);
 
     setDraggedId(null);
   };
 
-  const handleSave = () => {
-    alert("Your links are currently stored in local page state only.");
+  // Save all changes through one RPC call
+  const handleSave = async () => {
+    closeToast();
+
+    const success = await saveChanges();
+
+    if (success) {
+      showToast("Changes saved.", "success");
+    }
   };
+
+  // Discard unsaved changes
+  const handleDiscard = () => {
+    if (!hasChanges) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to discard all unsaved changes?",
+    );
+
+    if (!confirmed) return;
+
+    discardChanges();
+    setEditingId(null);
+    showToast("Unsaved changes discarded.", "info");
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">My Links</h1>
+          <p className="mt-2 text-sm text-neutral-500">Loading your links...</p>
+        </div>
+
+        <div className="animate-pulse space-y-4">
+          <div className="h-48 rounded-2xl bg-neutral-100" />
+          <div className="h-64 rounded-2xl bg-neutral-100" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
+      {/* Toast notifications */}
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
+
       {/* Page heading */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">My Links</h1>
+
         <p className="mt-2 text-sm text-neutral-500">
           Manage all your social and website links in one place.
         </p>
@@ -221,6 +274,7 @@ export default function LinksPage() {
         <section className="rounded-2xl border border-neutral-200 bg-white p-6">
           <div className="mb-6">
             <h2 className="font-semibold">Add a new link</h2>
+
             <p className="mt-1 text-sm text-neutral-500">
               Choose a platform and add your profile or website URL.
             </p>
@@ -250,6 +304,7 @@ export default function LinksPage() {
                     </option>
                   ))}
                 </select>
+
                 <ChevronDown
                   size={16}
                   className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400"
@@ -264,6 +319,7 @@ export default function LinksPage() {
               >
                 Link title
               </label>
+
               <input
                 id="link-title"
                 type="text"
@@ -282,15 +338,17 @@ export default function LinksPage() {
               >
                 URL
               </label>
+
               <div className="flex items-center gap-3 rounded-lg border border-neutral-200 px-4 transition focus-within:border-neutral-900">
                 <Link2 size={17} className="shrink-0 text-neutral-400" />
+
                 <input
                   id="link-url"
                   type="text"
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") addLink();
+                    if (e.key === "Enter") handleAddLink();
                   }}
                   placeholder="https://example.com/your-profile"
                   className="min-w-0 flex-1 py-3 text-sm outline-none placeholder:text-neutral-400"
@@ -300,7 +358,7 @@ export default function LinksPage() {
 
             <button
               type="button"
-              onClick={addLink}
+              onClick={handleAddLink}
               disabled={!newTitle.trim() || !newUrl.trim()}
               className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -315,6 +373,7 @@ export default function LinksPage() {
           <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <div>
               <h2 className="font-semibold">Your links</h2>
+
               <p className="mt-1 text-sm text-neutral-500">
                 Drag and drop to change their order on your public page.
               </p>
@@ -330,7 +389,9 @@ export default function LinksPage() {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
                 <Link2 size={22} className="text-neutral-400" />
               </div>
+
               <h3 className="mt-4 text-sm font-semibold">No links added yet</h3>
+
               <p className="mt-2 text-sm text-neutral-500">
                 Add your first social or website link above.
               </p>
@@ -338,7 +399,8 @@ export default function LinksPage() {
           ) : (
             <div className="space-y-3">
               {links.map((link) => {
-                const Icon = getServiceIcon(link.service);
+                const service = getServiceFromIcon(link.icon);
+                const Icon = getServiceIcon(service);
                 const isEditing = editingId === link.id;
 
                 return (
@@ -357,6 +419,7 @@ export default function LinksPage() {
                       <div className="space-y-4 p-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-sm font-semibold">Edit link</h3>
+
                           <button
                             type="button"
                             onClick={() => setEditingId(null)}
@@ -371,6 +434,7 @@ export default function LinksPage() {
                           <label className="mb-2 block text-xs font-medium text-neutral-600">
                             Link title
                           </label>
+
                           <input
                             value={editForm.title}
                             onChange={(e) =>
@@ -388,6 +452,7 @@ export default function LinksPage() {
                           <label className="mb-2 block text-xs font-medium text-neutral-600">
                             URL
                           </label>
+
                           <input
                             value={editForm.url}
                             onChange={(e) =>
@@ -408,9 +473,10 @@ export default function LinksPage() {
                           >
                             Cancel
                           </button>
+
                           <button
                             type="button"
-                            onClick={() => saveEdit(link.id)}
+                            onClick={() => handleSaveEdit(link.id)}
                             disabled={
                               !editForm.title.trim() || !editForm.url.trim()
                             }
@@ -439,12 +505,14 @@ export default function LinksPage() {
                             <h3 className="truncate text-sm font-medium">
                               {link.title}
                             </h3>
-                            {!link.enabled && (
+
+                            {!link.is_active && (
                               <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500">
                                 Hidden
                               </span>
                             )}
                           </div>
+
                           <p className="mt-1 truncate text-xs text-neutral-400">
                             {link.url}
                           </p>
@@ -453,18 +521,20 @@ export default function LinksPage() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => toggleLink(link.id)}
+                            onClick={() => handleToggleLink(link.id)}
                             aria-label={
-                              link.enabled ? "Hide link" : "Show link"
+                              link.is_active ? "Hide link" : "Show link"
                             }
-                            title={link.enabled ? "Hide link" : "Show link"}
+                            title={link.is_active ? "Hide link" : "Show link"}
                             className={`relative h-6 w-11 rounded-full transition ${
-                              link.enabled ? "bg-neutral-900" : "bg-neutral-200"
+                              link.is_active
+                                ? "bg-neutral-900"
+                                : "bg-neutral-200"
                             }`}
                           >
                             <span
                               className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
-                                link.enabled ? "left-6" : "left-1"
+                                link.is_active ? "left-6" : "left-1"
                               }`}
                             />
                           </button>
@@ -481,7 +551,7 @@ export default function LinksPage() {
 
                           <button
                             type="button"
-                            onClick={() => deleteLink(link.id)}
+                            onClick={() => handleDeleteLink(link.id)}
                             title="Delete link"
                             aria-label="Delete link"
                             className="rounded-lg p-2 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
@@ -504,6 +574,7 @@ export default function LinksPage() {
             size={18}
             className="mt-0.5 shrink-0 text-neutral-500"
           />
+
           <p className="text-xs leading-5 text-neutral-500">
             Your enabled links will appear on your public profile. Hidden links
             remain in your dashboard but won't be shown to visitors.
@@ -511,15 +582,34 @@ export default function LinksPage() {
         </div>
 
         {/* Save changes */}
-        <div className="flex justify-end border-t border-neutral-200 pt-5">
-          <button
-            type="button"
-            onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-700"
-          >
-            <Save size={16} />
-            Save changes
-          </button>
+        <div className="flex flex-col-reverse justify-between gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center">
+          <div className="text-xs text-neutral-500">
+            {hasChanges
+              ? "You have unsaved changes."
+              : "All changes are saved."}
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleDiscard}
+              disabled={!hasChanges || isSaving}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RotateCcw size={15} />
+              Discard
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!hasChanges || isSaving}
+              className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Save size={16} />
+              {isSaving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
