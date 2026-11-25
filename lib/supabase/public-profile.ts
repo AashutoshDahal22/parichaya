@@ -6,7 +6,7 @@ export async function getPublicProfile(username: string) {
   // Fetch profile
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, username, name, bio, avatar_url")
+    .select("id, username, name, bio, avatar_url, background_url")
     .eq("username", username.toLowerCase())
     .maybeSingle();
 
@@ -38,6 +38,7 @@ export async function getPublicProfile(username: string) {
       name: profile.name,
       bio: profile.bio,
       avatar_url: profile.avatar_url,
+      background_url: profile.background_url,
     },
     links: links ?? [],
   };
