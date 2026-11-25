@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Globe } from "lucide-react";
+import { ArrowUpRight,ArrowRight, Globe } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -65,9 +65,15 @@ export default function DashboardPage() {
 
             <p className="mt-3 text-sm text-neutral-500">Your personal page:</p>
 
-            <p className="mt-2 font-medium">
+            <a
+              href={`${siteUrl?.replace(/\/$/, "")}/${profile.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-2 font-medium text-neutral-900 underline underline-offset-4 transition hover:text-neutral-500"
+            >
               {siteHost}/{profile.username}
-            </p>
+              <ArrowUpRight size={15} />
+            </a>
           </div>
         ) : (
           <div className="mt-10 rounded-2xl border border-neutral-200 bg-white p-6 md:p-8">
