@@ -6,7 +6,10 @@ export default function Loading() {
       aria-busy="true"
       className="fixed inset-0 z-[9999] grid place-items-center bg-black transition-opacity delay-150 duration-500 starting:opacity-0"
     >
-      <div aria-hidden="true" className="relative grid size-18 place-items-center">
+      <div
+        aria-hidden="true"
+        className="relative grid size-18 place-items-center"
+      >
         {/* expanding ripple */}
         <span className="absolute inset-[26px] rounded-full border border-indigo-400/60 animate-[ping_1.4s_cubic-bezier(0,0,0.2,1)_infinite] motion-reduce:hidden" />
 

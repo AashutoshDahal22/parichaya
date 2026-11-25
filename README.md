@@ -35,7 +35,20 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-
 idea about a automated digital card or canva import or png support
 
 https://github.com/AashutoshDahal22/parichaya.git
+
+Known issues
+
+- When the email verification fails the creds are in the db and can be used for login
+- Not taking users into a check email page after signup
+  - added toast message
+- Not clearing the form after the toast message displays the information on the form remains the same and users can multiclick, if they somehow seem to miss the toast message
+- Toast message has no animation
+
+Work remains
+
+- Work on image handling
+- Work on links handling and saving
+- Work on displaying and generating URL based on the username

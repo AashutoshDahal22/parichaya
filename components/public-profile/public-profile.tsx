@@ -1,14 +1,22 @@
-import { ArrowUpRight } from "lucide-react";
-
+import { ArrowUpRight, UserRound } from "lucide-react";
 import {
-  FaLinkedin,
-  FaFacebook,
-  FaInstagram,
-  FaTwitter,
-  FaGithub,
-  FaYoutube,
   FaGlobe,
+  FaGithub,
+  FaInstagram,
+  FaLinkedin,
+  FaTwitter,
+  FaFacebook,
+  FaYoutube,
 } from "react-icons/fa";
+
+type PublicProfileProps = {
+  profile: {
+    username: string;
+    name: string;
+    bio: string | null;
+    avatar_url: string | null;
+  };
+};
 
 const links = [
   {
@@ -36,7 +44,7 @@ const links = [
     icon: FaInstagram,
   },
   {
-    title: "X(Formerly Twitter)",
+    title: "X (Formerly Twitter)",
     description: "Life outside the terminal",
     href: "#",
     icon: FaTwitter,
@@ -48,32 +56,40 @@ const links = [
     icon: FaFacebook,
   },
   {
-    title: "Youtube",
-    description: "Life outside the terminal",
+    title: "YouTube",
+    description: "Videos & content",
     href: "#",
     icon: FaYoutube,
   },
 ];
 
-export default function Home() {
+export function PublicProfile({ profile }: PublicProfileProps) {
   return (
     <main className="min-h-screen px-6 py-16">
       <div className="mx-auto flex max-w-md flex-col items-center">
         {/* Profile */}
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e8e4dc] text-2xl font-semibold">
-            A
+          <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#e8e4dc] text-2xl font-semibold">
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={`${profile.name || profile.username}'s profile picture`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound size={32} className="text-neutral-500" />
+            )}
           </div>
 
           <h1 className="mt-6 text-2xl font-semibold tracking-tight">
-            Aashutosh
+            {profile.name || profile.username}
           </h1>
 
-          <p className="mt-2 max-w-xs text-sm leading-6 text-neutral-500">
-            Developer, builder & curious human.
-            <br />
-            Documenting things as I go.
-          </p>
+          {profile.bio && (
+            <p className="mt-2 max-w-xs text-sm leading-6 text-neutral-500">
+              {profile.bio}
+            </p>
+          )}
         </div>
 
         {/* Links */}
@@ -94,7 +110,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex-1">
-                  <h2 className="text-lg text-black font-extrabold">
+                  <h2 className="text-lg font-extrabold text-black">
                     {link.title}
                   </h2>
 
