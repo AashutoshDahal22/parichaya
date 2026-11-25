@@ -108,6 +108,10 @@ export default function ProfilePage() {
     null,
   );
 
+  // Saved images marked for deletion on the next save
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [removeBackground, setRemoveBackground] = useState(false);
+
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const avatarPreview = useImagePreview(selectedAvatar);
@@ -145,11 +149,21 @@ export default function ProfilePage() {
   const publicUrl =
     siteUrl && username ? `${siteUrl.replace(/\/$/, "")}/${username}` : null;
 
-  const profileImage = avatarPreview || profile?.avatar_url || null;
-  const backgroundImage = backgroundPreview || null;
+  // New selection > saved image (unless marked for removal) > placeholder
+  const profileImage =
+    avatarPreview || (removeAvatar ? null : (profile?.avatar_url ?? null));
+
+  const backgroundImage =
+    backgroundPreview ||
+    (removeBackground ? null : (profile?.background_url ?? null));
 
   const hasChanges = name !== saved.name || bio !== saved.bio;
-  const hasImageSelection = Boolean(selectedAvatar || selectedBackground);
+
+  const hasImageSelection = Boolean(
+    selectedAvatar || selectedBackground || removeAvatar || removeBackground,
+  );
+
+  const hasUnsavedChanges = hasChanges || hasImageSelection;
 
   // Validate and select images
   const handleImageChange = (
@@ -174,8 +188,10 @@ export default function ProfilePage() {
 
     if (type === "avatar") {
       setSelectedAvatar(file);
+      setRemoveAvatar(false);
     } else {
       setSelectedBackground(file);
+      setRemoveBackground(false);
     }
 
     // Allow selecting the same file again after removing it
@@ -183,7 +199,13 @@ export default function ProfilePage() {
   };
 
   const handleRemoveAvatar = () => {
-    setSelectedAvatar(null);
+    if (selectedAvatar) {
+      // Drop the newly selected file and revert to the saved image
+      setSelectedAvatar(null);
+    } else if (profile?.avatar_url) {
+      // Mark the saved image for deletion on save
+      setRemoveAvatar(true);
+    }
 
     if (avatarInputRef.current) {
       avatarInputRef.current.value = "";
@@ -191,7 +213,13 @@ export default function ProfilePage() {
   };
 
   const handleRemoveBackground = () => {
-    setSelectedBackground(null);
+    if (selectedBackground) {
+      // Drop the newly selected file and revert to the saved image
+      setSelectedBackground(null);
+    } else if (profile?.background_url) {
+      // Mark the saved image for deletion on save
+      setRemoveBackground(true);
+    }
 
     if (backgroundInputRef.current) {
       backgroundInputRef.current.value = "";
@@ -201,16 +229,34 @@ export default function ProfilePage() {
   const handleSave = async () => {
     closeToast();
 
-    const success = await saveProfile(name, bio);
+    // The hook saves trimmed values, so keep local state in sync with them
+    const trimmedName = name.trim();
+    const trimmedBio = bio.trim();
+
+    const success = await saveProfile(name, bio, {
+      avatarFile: selectedAvatar,
+      backgroundFile: selectedBackground,
+      removeAvatar,
+      removeBackground,
+    });
 
     if (success) {
-      setSaved({ name, bio });
-      showToast("Changes saved.", "success");
+      setName(trimmedName);
+      setBio(trimmedBio);
+      setSaved({ name: trimmedName, bio: trimmedBio });
+
+      setSelectedAvatar(null);
+      setSelectedBackground(null);
+
+      setRemoveAvatar(false);
+      setRemoveBackground(false);
+
+      showToast("Profile updated successfully.", "success");
     }
   };
 
   const handleDiscard = () => {
-    if (!hasChanges && !hasImageSelection) return;
+    if (!hasUnsavedChanges) return;
 
     const confirmed = window.confirm(
       "Are you sure you want to discard all unsaved changes?",
@@ -220,8 +266,21 @@ export default function ProfilePage() {
 
     setName(saved.name);
     setBio(saved.bio);
-    handleRemoveAvatar();
-    handleRemoveBackground();
+
+    setSelectedAvatar(null);
+    setSelectedBackground(null);
+
+    setRemoveAvatar(false);
+    setRemoveBackground(false);
+
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+
+    if (backgroundInputRef.current) {
+      backgroundInputRef.current.value = "";
+    }
+
     showToast("Unsaved changes discarded.", "info");
   };
 
@@ -409,11 +468,15 @@ export default function ProfilePage() {
                   </span>
                 </button>
 
-                {selectedAvatar ? (
+                {profileImage ? (
                   <button
                     type="button"
                     onClick={handleRemoveAvatar}
-                    aria-label="Remove selected profile picture"
+                    aria-label={
+                      selectedAvatar
+                        ? "Remove selected profile picture"
+                        : "Remove profile picture"
+                    }
                     className={`absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 shadow-sm transition hover:bg-neutral-50 ${focusRing}`}
                   >
                     <X size={14} />
@@ -475,8 +538,8 @@ export default function ProfilePage() {
             <Info size={18} className="mt-0.5 shrink-0 text-neutral-500" />
 
             <p className="text-xs leading-5 text-neutral-500">
-              Image selections currently preview locally. Uploading and saving
-              images will be connected to your profile storage.
+              Your profile picture and background image will appear on your
+              public page once you save your changes.
             </p>
           </div>
         </section>
@@ -624,18 +687,16 @@ export default function ProfilePage() {
         {/* Save actions */}
         <div className="flex flex-col-reverse justify-between gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center">
           <div className="text-xs text-neutral-500" aria-live="polite">
-            {hasChanges
+            {hasUnsavedChanges
               ? "You have unsaved changes."
-              : hasImageSelection
-                ? "Picture changes are preview only for now."
-                : "All changes are saved."}
+              : "All changes are saved."}
           </div>
 
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={handleDiscard}
-              disabled={(!hasChanges && !hasImageSelection) || isSaving}
+              disabled={!hasUnsavedChanges || isSaving}
               className={secondaryButton}
             >
               <RotateCcw size={15} />
@@ -645,7 +706,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={handleSave}
-              disabled={!hasChanges || isSaving}
+              disabled={!hasUnsavedChanges || isSaving}
               className={primaryButton}
             >
               <Check size={16} />
